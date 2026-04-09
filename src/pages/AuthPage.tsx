@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 
 export default function AuthPage() {
   const { signIn, signUp } = useAuthStore()
+  const navigate = useNavigate()
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -18,6 +20,7 @@ export default function AuthPage() {
     if (mode === 'login') {
       const err = await signIn(email, password)
       if (err) setError(err)
+      else navigate('/')
     } else {
       const err = await signUp(email, password)
       if (err) setError(err)
