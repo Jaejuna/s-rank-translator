@@ -13,8 +13,8 @@ interface SettingsState {
 }
 
 const DEFAULT_MODELS: Record<LLMProvider, string> = {
-  openai: 'gpt-4o',
-  anthropic: 'claude-3-5-sonnet-20241022',
+  openai: 'gpt-4.1',
+  anthropic: 'claude-sonnet-4-5',
 }
 
 export const useSettingsStore = create<SettingsState>()(
