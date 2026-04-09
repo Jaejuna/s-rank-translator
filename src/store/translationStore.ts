@@ -1,6 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import { nanoid } from './utils'
+import { supabase } from '../lib/supabase'
 
 export interface TranslationRecord {
   id: string
@@ -36,41 +35,123 @@ export interface EvaluationRecord {
 interface TranslationState {
   translations: TranslationRecord[]
   evaluations: EvaluationRecord[]
-  addTranslation: (record: Omit<TranslationRecord, 'id' | 'createdAt'>) => TranslationRecord
-  addEvaluation: (record: Omit<EvaluationRecord, 'id' | 'createdAt'>) => void
+  loading: boolean
+  fetchTranslations: () => Promise<void>
+  fetchEvaluations: (translationId: string) => Promise<EvaluationRecord[]>
+  addTranslation: (record: Omit<TranslationRecord, 'id' | 'createdAt'>) => Promise<TranslationRecord | null>
+  addEvaluation: (record: Omit<EvaluationRecord, 'id' | 'createdAt'>) => Promise<void>
   getEvaluationsForTranslation: (translationId: string) => EvaluationRecord[]
-  deleteTranslation: (id: string) => void
+  deleteTranslation: (id: string) => Promise<void>
+  clear: () => void
 }
 
-export const useTranslationStore = create<TranslationState>()(
-  persist(
-    (set, get) => ({
-      translations: [],
-      evaluations: [],
-      addTranslation: (record) => {
-        const newRecord: TranslationRecord = {
-          ...record,
-          id: nanoid(),
-          createdAt: new Date().toISOString(),
-        }
-        set((state) => ({ translations: [newRecord, ...state.translations] }))
-        return newRecord
-      },
-      addEvaluation: (record) =>
-        set((state) => ({
-          evaluations: [
-            ...state.evaluations,
-            { ...record, id: nanoid(), createdAt: new Date().toISOString() },
-          ],
-        })),
-      getEvaluationsForTranslation: (translationId) =>
-        get().evaluations.filter((e) => e.translationId === translationId),
-      deleteTranslation: (id) =>
-        set((state) => ({
-          translations: state.translations.filter((t) => t.id !== id),
-          evaluations: state.evaluations.filter((e) => e.translationId !== id),
-        })),
-    }),
-    { name: 's-rank-translations' }
-  )
-)
+function toTranslation(row: Record<string, unknown>): TranslationRecord {
+  return {
+    id: row.id as string,
+    sourceText: row.source_text as string,
+    translatedText: row.translated_text as string,
+    sourceLang: row.source_lang as string,
+    targetLang: row.target_lang as string,
+    promptVersionId: row.prompt_version_id as string,
+    promptVersionName: row.prompt_version_name as string,
+    model: row.model as string,
+    createdAt: row.created_at as string,
+  }
+}
+
+function toEvaluation(row: Record<string, unknown>): EvaluationRecord {
+  return {
+    id: row.id as string,
+    translationId: row.translation_id as string,
+    scores: row.scores as EvaluationScores,
+    comment: row.comment as string,
+    evaluatedBy: row.evaluated_by as 'human' | 'llm',
+    createdAt: row.created_at as string,
+  }
+}
+
+export const useTranslationStore = create<TranslationState>((set, get) => ({
+  translations: [],
+  evaluations: [],
+  loading: false,
+
+  fetchTranslations: async () => {
+    set({ loading: true })
+    const { data } = await supabase
+      .from('translations')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (data) set({ translations: data.map(toTranslation) })
+    set({ loading: false })
+  },
+
+  fetchEvaluations: async (translationId) => {
+    const { data } = await supabase
+      .from('evaluations')
+      .select('*')
+      .eq('translation_id', translationId)
+      .order('created_at', { ascending: false })
+    const evals = data ? data.map(toEvaluation) : []
+    set((state) => {
+      const others = state.evaluations.filter((e) => e.translationId !== translationId)
+      return { evaluations: [...others, ...evals] }
+    })
+    return evals
+  },
+
+  addTranslation: async (record) => {
+    const { data: user } = await supabase.auth.getUser()
+    if (!user.user) return null
+    const { data } = await supabase
+      .from('translations')
+      .insert({
+        user_id: user.user.id,
+        source_text: record.sourceText,
+        translated_text: record.translatedText,
+        source_lang: record.sourceLang,
+        target_lang: record.targetLang,
+        prompt_version_id: record.promptVersionId,
+        prompt_version_name: record.promptVersionName,
+        model: record.model,
+      })
+      .select()
+      .single()
+    if (!data) return null
+    const newRecord = toTranslation(data)
+    set((state) => ({ translations: [newRecord, ...state.translations] }))
+    return newRecord
+  },
+
+  addEvaluation: async (record) => {
+    const { data: user } = await supabase.auth.getUser()
+    if (!user.user) return
+    const { data } = await supabase
+      .from('evaluations')
+      .insert({
+        user_id: user.user.id,
+        translation_id: record.translationId,
+        scores: record.scores,
+        comment: record.comment,
+        evaluated_by: record.evaluatedBy,
+      })
+      .select()
+      .single()
+    if (data) {
+      const newEval = toEvaluation(data)
+      set((state) => ({ evaluations: [newEval, ...state.evaluations] }))
+    }
+  },
+
+  getEvaluationsForTranslation: (translationId) =>
+    get().evaluations.filter((e) => e.translationId === translationId),
+
+  deleteTranslation: async (id) => {
+    await supabase.from('translations').delete().eq('id', id)
+    set((state) => ({
+      translations: state.translations.filter((t) => t.id !== id),
+      evaluations: state.evaluations.filter((e) => e.translationId !== id),
+    }))
+  },
+
+  clear: () => set({ translations: [], evaluations: [] }),
+}))

@@ -58,7 +58,7 @@ function avgScore(scores: EvaluationScores): number {
 }
 
 export default function EvaluatePage() {
-  const { translations, addEvaluation, getEvaluationsForTranslation } = useTranslationStore()
+  const { translations, addEvaluation, fetchEvaluations, getEvaluationsForTranslation } = useTranslationStore()
   const { provider, apiKey, model } = useSettingsStore()
 
   const [selectedId, setSelectedId] = useState<string>('')
@@ -71,12 +71,13 @@ export default function EvaluatePage() {
   const selected: TranslationRecord | undefined = translations.find((t) => t.id === selectedId)
   const existingEvals = selectedId ? getEvaluationsForTranslation(selectedId) : []
 
-  function handleSelect(id: string) {
+  async function handleSelect(id: string) {
     setSelectedId(id)
     setScores({ ...EMPTY_SCORES })
     setComment('')
     setError('')
     setSaved(false)
+    if (id) await fetchEvaluations(id)
   }
 
   function handleScoreChange(key: keyof EvaluationScores, value: number) {

@@ -53,7 +53,7 @@ export default function TranslatePage() {
         userMessage: sourceText,
       })
       setResult(translated)
-      addTranslation({
+      await addTranslation({
         sourceText,
         translatedText: translated,
         sourceLang,
