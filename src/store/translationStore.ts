@@ -40,8 +40,8 @@ interface TranslationState {
   loading: boolean
   fetchTranslations: () => Promise<void>
   fetchEvaluations: (translationId: string) => Promise<EvaluationRecord[]>
-  addTranslation: (record: Omit<TranslationRecord, 'id' | 'createdAt'>) => Promise<TranslationRecord | null>
-  addEvaluation: (record: Omit<EvaluationRecord, 'id' | 'createdAt'>) => Promise<void>
+  addTranslation: (record: Omit<TranslationRecord, 'id' | 'createdAt' | 'userId'>) => Promise<TranslationRecord | null>
+  addEvaluation: (record: Omit<EvaluationRecord, 'id' | 'createdAt' | 'userId'>) => Promise<void>
   getEvaluationsForTranslation: (translationId: string) => EvaluationRecord[]
   deleteTranslation: (id: string) => Promise<void>
   clear: () => void

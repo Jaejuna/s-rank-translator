@@ -62,6 +62,11 @@ function shortId(userId: string) {
   return userId.slice(0, 8)
 }
 
+const LANGUAGES = [
+  'Korean', 'English', 'Japanese', 'Chinese (Simplified)',
+  'Chinese (Traditional)', 'French', 'German', 'Spanish',
+]
+
 export default function EvaluatePage() {
   const { translations, fetchTranslations, addEvaluation, fetchEvaluations, getEvaluationsForTranslation } = useTranslationStore()
   const { provider, apiKey, model } = useSettingsStore()
@@ -76,16 +81,31 @@ export default function EvaluatePage() {
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
 
+  // 필터 상태
+  const [filterText, setFilterText] = useState('')
+  const [filterSourceLang, setFilterSourceLang] = useState('')
+  const [filterTargetLang, setFilterTargetLang] = useState('')
+  const [filterAuthor, setFilterAuthor] = useState<'all' | 'mine'>('all')
+
+  const filteredTranslations = translations.filter((t) => {
+    if (filterText && !t.sourceText.toLowerCase().includes(filterText.toLowerCase()) &&
+        !t.translatedText.toLowerCase().includes(filterText.toLowerCase())) return false
+    if (filterSourceLang && t.sourceLang !== filterSourceLang) return false
+    if (filterTargetLang && t.targetLang !== filterTargetLang) return false
+    if (filterAuthor === 'mine' && t.userId !== user?.id) return false
+    return true
+  })
+
   const selected: TranslationRecord | undefined = translations.find((t) => t.id === selectedId)
   const existingEvals = selectedId ? getEvaluationsForTranslation(selectedId) : []
 
   async function handleSelect(id: string) {
-    setSelectedId(id)
+    setSelectedId(selectedId === id ? '' : id)
     setScores({ ...EMPTY_SCORES })
     setComment('')
     setError('')
     setSaved(false)
-    if (id) await fetchEvaluations(id)
+    if (id && selectedId !== id) await fetchEvaluations(id)
   }
 
   function handleScoreChange(key: keyof EvaluationScores, value: number) {
@@ -145,24 +165,113 @@ export default function EvaluatePage() {
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">번역 평가</h1>
 
-      {/* Select translation */}
+      {/* Filter + Translation table */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">평가할 번역 선택</label>
-        {translations.length === 0 ? (
-          <p className="text-sm text-gray-400">번역 이력이 없습니다. 먼저 번역을 수행해주세요.</p>
-        ) : (
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold text-gray-800">번역 목록</h2>
+          <span className="text-xs text-gray-400">{filteredTranslations.length} / {translations.length}건</span>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <input
+            type="text"
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            placeholder="원문/번역문 검색..."
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-48"
+          />
           <select
-            value={selectedId}
-            onChange={(e) => handleSelect(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            value={filterSourceLang}
+            onChange={(e) => setFilterSourceLang(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
           >
-            <option value="">선택하세요...</option>
-            {translations.map((t) => (
-              <option key={t.id} value={t.id}>
-                [{new Date(t.createdAt).toLocaleDateString('ko-KR')}] {t.sourceLang}→{t.targetLang} | {t.sourceText.slice(0, 40)}...
-              </option>
-            ))}
+            <option value="">원문 언어 전체</option>
+            {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
+          <select
+            value={filterTargetLang}
+            onChange={(e) => setFilterTargetLang(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          >
+            <option value="">번역 언어 전체</option>
+            {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
+          <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
+            <button
+              onClick={() => setFilterAuthor('all')}
+              className={`px-3 py-1.5 transition-colors ${filterAuthor === 'all' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              전체
+            </button>
+            <button
+              onClick={() => setFilterAuthor('mine')}
+              className={`px-3 py-1.5 transition-colors ${filterAuthor === 'mine' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              내 번역
+            </button>
+          </div>
+          {(filterText || filterSourceLang || filterTargetLang || filterAuthor !== 'all') && (
+            <button
+              onClick={() => { setFilterText(''); setFilterSourceLang(''); setFilterTargetLang(''); setFilterAuthor('all') }}
+              className="text-xs text-gray-400 hover:text-gray-600 px-2"
+            >
+              초기화
+            </button>
+          )}
+        </div>
+
+        {translations.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">번역 이력이 없습니다. 먼저 번역을 수행해주세요.</p>
+        ) : filteredTranslations.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">필터 조건에 맞는 번역이 없습니다.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-left">
+                  <th className="pb-2 font-medium text-gray-500 w-1/3">원문</th>
+                  <th className="pb-2 font-medium text-gray-500 w-1/3">번역문</th>
+                  <th className="pb-2 font-medium text-gray-500">언어</th>
+                  <th className="pb-2 font-medium text-gray-500">프롬프트</th>
+                  <th className="pb-2 font-medium text-gray-500">작성자</th>
+                  <th className="pb-2 font-medium text-gray-500">날짜</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTranslations.map((t) => (
+                  <tr
+                    key={t.id}
+                    onClick={() => handleSelect(t.id)}
+                    className={`border-b border-gray-50 cursor-pointer transition-colors ${
+                      selectedId === t.id
+                        ? 'bg-indigo-50 border-indigo-100'
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <td className="py-2 pr-3 text-gray-700">
+                      <p className="truncate max-w-xs">{t.sourceText}</p>
+                    </td>
+                    <td className="py-2 pr-3 text-gray-700">
+                      <p className="truncate max-w-xs">{t.translatedText}</p>
+                    </td>
+                    <td className="py-2 pr-3 text-gray-500 whitespace-nowrap text-xs">{t.sourceLang} → {t.targetLang}</td>
+                    <td className="py-2 pr-3 text-gray-500 text-xs">{t.promptVersionName}</td>
+                    <td className="py-2 pr-3 text-xs">
+                      {t.userId === user?.id ? (
+                        <span className="text-indigo-600 font-medium">나</span>
+                      ) : (
+                        <span className="text-gray-400 font-mono">{shortId(t.userId)}</span>
+                      )}
+                    </td>
+                    <td className="py-2 pr-3 text-gray-400 text-xs whitespace-nowrap">
+                      {new Date(t.createdAt).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

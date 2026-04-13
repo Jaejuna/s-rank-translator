@@ -167,9 +167,12 @@ export default function TranslatePage() {
 
       {/* History */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="text-base font-semibold text-gray-800 mb-4">
-          전체 번역 이력 ({translations.length}건)
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold text-gray-800">
+            최근 번역 이력
+          </h2>
+          <span className="text-xs text-gray-400">{translations.length}건 중 최근 10건</span>
+        </div>
         {translations.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-8">번역 이력이 없습니다.</p>
         ) : (
@@ -188,7 +191,7 @@ export default function TranslatePage() {
                 </tr>
               </thead>
               <tbody>
-                {translations.map((t) => (
+                {translations.slice(0, 10).map((t) => (
                   <tr
                     key={t.id}
                     onClick={() => setSelectedRecord(selectedRecord?.id === t.id ? null : t)}
