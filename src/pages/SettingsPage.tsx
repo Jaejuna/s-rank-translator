@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useSettingsStore, DEFAULT_MODELS, type LLMProvider } from '../store/settingsStore'
+import BatchUpload from '../components/BatchUpload'
 
 const OPENAI_MODELS = ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4o', 'gpt-4o-mini']
 const ANTHROPIC_MODELS = [
@@ -27,8 +28,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">설정</h1>
+    <div className="max-w-xl space-y-6">
+      <h1 className="text-2xl font-bold text-gray-900">설정</h1>
 
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
         {/* Provider */}
@@ -93,6 +94,8 @@ export default function SettingsPage() {
           {saved ? '저장됨 ✓' : '저장'}
         </button>
       </div>
+
+      <BatchUpload />
     </div>
   )
 }
