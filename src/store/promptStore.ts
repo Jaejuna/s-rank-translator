@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 
 export interface PromptVersion {
   id: string
+  userId: string
   name: string
   content: string
   createdAt: string
@@ -35,6 +36,7 @@ interface PromptState {
 function toPromptVersion(row: Record<string, unknown>): PromptVersion {
   return {
     id: row.id as string,
+    userId: row.user_id as string,
     name: row.name as string,
     content: row.content as string,
     createdAt: row.created_at as string,

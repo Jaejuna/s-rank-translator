@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSettingsStore } from '../store/settingsStore'
 import { usePromptStore } from '../store/promptStore'
 import { useTranslationStore, type TranslationRecord } from '../store/translationStore'
+import { useAuthStore } from '../store/authStore'
 import { callLLM, buildTranslationPrompt } from '../lib/llm'
 
 const LANGUAGES = [
@@ -15,10 +16,17 @@ const LANGUAGES = [
   { code: 'Spanish', label: '스페인어' },
 ]
 
+function shortId(userId: string) {
+  return userId.slice(0, 8)
+}
+
 export default function TranslatePage() {
   const { provider, apiKey, model } = useSettingsStore()
   const { prompts, getDefault } = usePromptStore()
-  const { translations, addTranslation, deleteTranslation } = useTranslationStore()
+  const { translations, fetchTranslations, addTranslation, deleteTranslation } = useTranslationStore()
+  const { user } = useAuthStore()
+
+  useEffect(() => { fetchTranslations() }, [])
 
   const [sourceText, setSourceText] = useState('')
   const [sourceLang, setSourceLang] = useState('English')
@@ -160,7 +168,7 @@ export default function TranslatePage() {
       {/* History */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="text-base font-semibold text-gray-800 mb-4">
-          번역 이력 ({translations.length}건)
+          전체 번역 이력 ({translations.length}건)
         </h2>
         {translations.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-8">번역 이력이 없습니다.</p>
@@ -174,6 +182,7 @@ export default function TranslatePage() {
                   <th className="pb-2 font-medium text-gray-500">언어</th>
                   <th className="pb-2 font-medium text-gray-500">프롬프트</th>
                   <th className="pb-2 font-medium text-gray-500">모델</th>
+                  <th className="pb-2 font-medium text-gray-500">작성자</th>
                   <th className="pb-2 font-medium text-gray-500">날짜</th>
                   <th className="pb-2"></th>
                 </tr>
@@ -190,16 +199,25 @@ export default function TranslatePage() {
                     <td className="py-2 pr-3 text-gray-500 whitespace-nowrap text-xs">{t.sourceLang} → {t.targetLang}</td>
                     <td className="py-2 pr-3 text-gray-500 text-xs">{t.promptVersionName}</td>
                     <td className="py-2 pr-3 text-gray-500 text-xs">{t.model}</td>
+                    <td className="py-2 pr-3 text-xs">
+                      {t.userId === user?.id ? (
+                        <span className="text-indigo-600 font-medium">나</span>
+                      ) : (
+                        <span className="text-gray-400 font-mono">{shortId(t.userId)}</span>
+                      )}
+                    </td>
                     <td className="py-2 pr-3 text-gray-400 text-xs whitespace-nowrap">
                       {new Date(t.createdAt).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </td>
                     <td className="py-2">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); deleteTranslation(t.id) }}
-                        className="text-red-400 hover:text-red-600 text-xs"
-                      >
-                        삭제
-                      </button>
+                      {t.userId === user?.id && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteTranslation(t.id) }}
+                          className="text-red-400 hover:text-red-600 text-xs"
+                        >
+                          삭제
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

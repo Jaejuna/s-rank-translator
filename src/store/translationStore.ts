@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 
 export interface TranslationRecord {
   id: string
+  userId: string
   sourceText: string
   translatedText: string
   sourceLang: string
@@ -25,6 +26,7 @@ export interface EvaluationScores {
 
 export interface EvaluationRecord {
   id: string
+  userId: string
   translationId: string
   scores: EvaluationScores
   comment: string
@@ -48,6 +50,7 @@ interface TranslationState {
 function toTranslation(row: Record<string, unknown>): TranslationRecord {
   return {
     id: row.id as string,
+    userId: row.user_id as string,
     sourceText: row.source_text as string,
     translatedText: row.translated_text as string,
     sourceLang: row.source_lang as string,
@@ -62,6 +65,7 @@ function toTranslation(row: Record<string, unknown>): TranslationRecord {
 function toEvaluation(row: Record<string, unknown>): EvaluationRecord {
   return {
     id: row.id as string,
+    userId: row.user_id as string,
     translationId: row.translation_id as string,
     scores: row.scores as EvaluationScores,
     comment: row.comment as string,

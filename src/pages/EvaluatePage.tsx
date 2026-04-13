@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslationStore, type TranslationRecord, type EvaluationScores } from '../store/translationStore'
 import { useSettingsStore } from '../store/settingsStore'
+import { useAuthStore } from '../store/authStore'
 import { callLLM, EVALUATION_CRITERIA, buildEvaluationPrompt } from '../lib/llm'
 
 const EMPTY_SCORES: EvaluationScores = {
@@ -57,9 +58,16 @@ function avgScore(scores: EvaluationScores): number {
   return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10
 }
 
+function shortId(userId: string) {
+  return userId.slice(0, 8)
+}
+
 export default function EvaluatePage() {
-  const { translations, addEvaluation, fetchEvaluations, getEvaluationsForTranslation } = useTranslationStore()
+  const { translations, fetchTranslations, addEvaluation, fetchEvaluations, getEvaluationsForTranslation } = useTranslationStore()
   const { provider, apiKey, model } = useSettingsStore()
+  const { user } = useAuthStore()
+
+  useEffect(() => { fetchTranslations() }, [])
 
   const [selectedId, setSelectedId] = useState<string>('')
   const [scores, setScores] = useState<EvaluationScores>({ ...EMPTY_SCORES })
@@ -242,6 +250,14 @@ export default function EvaluatePage() {
                         </span>
                         <span className="text-sm font-bold text-indigo-600">
                           평균 {avgScore(ev.scores)}점
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          by{' '}
+                          {ev.userId === user?.id ? (
+                            <span className="text-indigo-600 font-medium">나</span>
+                          ) : (
+                            <span className="font-mono">{shortId(ev.userId)}</span>
+                          )}
                         </span>
                       </div>
                       <span className="text-xs text-gray-400">

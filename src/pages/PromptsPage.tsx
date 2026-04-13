@@ -1,8 +1,14 @@
 import { useState } from 'react'
 import { usePromptStore, type PromptVersion } from '../store/promptStore'
+import { useAuthStore } from '../store/authStore'
+
+function shortId(userId: string) {
+  return userId.slice(0, 8)
+}
 
 export default function PromptsPage() {
   const { prompts, addPrompt, updatePrompt, deletePrompt, setDefault } = usePromptStore()
+  const { user } = useAuthStore()
   const [newName, setNewName] = useState('')
   const [newContent, setNewContent] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -30,7 +36,7 @@ export default function PromptsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">프롬프트 관리</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">공유 프롬프트 관리</h1>
 
       {/* Add new */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
@@ -103,6 +109,14 @@ export default function PromptsPage() {
                         기본값
                       </span>
                     )}
+                    <span className="text-xs text-gray-400">
+                      by{' '}
+                      {p.userId === user?.id ? (
+                        <span className="text-indigo-600 font-medium">나</span>
+                      ) : (
+                        <span className="font-mono">{shortId(p.userId)}</span>
+                      )}
+                    </span>
                   </div>
                   <span className="text-xs text-gray-400">
                     {new Date(p.createdAt).toLocaleDateString('ko-KR')}
@@ -120,13 +134,15 @@ export default function PromptsPage() {
                       기본값으로 설정
                     </button>
                   )}
-                  <button
-                    onClick={() => startEdit(p)}
-                    className="border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-50"
-                  >
-                    편집
-                  </button>
-                  {prompts.length > 1 && (
+                  {p.userId === user?.id && (
+                    <button
+                      onClick={() => startEdit(p)}
+                      className="border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-50"
+                    >
+                      편집
+                    </button>
+                  )}
+                  {p.userId === user?.id && prompts.length > 1 && (
                     <button
                       onClick={() => deletePrompt(p.id)}
                       className="border border-red-200 text-red-500 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-50"
