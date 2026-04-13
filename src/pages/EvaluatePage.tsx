@@ -3,6 +3,7 @@ import { useTranslationStore, type TranslationRecord, type EvaluationScores } fr
 import { useSettingsStore } from '../store/settingsStore'
 import { useAuthStore } from '../store/authStore'
 import { callLLM, EVALUATION_CRITERIA, buildEvaluationPrompt } from '../lib/llm'
+import { useColumnResize } from '../lib/useColumnResize'
 
 const EMPTY_SCORES: EvaluationScores = {
   terminology: 3,
@@ -58,8 +59,9 @@ function avgScore(scores: EvaluationScores): number {
   return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10
 }
 
-function displayName(email: string) {
-  return email ? email.split('@')[0] : '?'
+function displayName(email: string, userId: string) {
+  if (email) return email.split('@')[0]
+  return userId.slice(0, 8)
 }
 
 const LANGUAGES = [
@@ -73,6 +75,8 @@ export default function EvaluatePage() {
   const { user } = useAuthStore()
 
   useEffect(() => { fetchTranslations() }, [])
+
+  const { widths, startResize } = useColumnResize([200, 200, 110, 110, 70, 100])
 
   const [selectedId, setSelectedId] = useState<string>('')
   const [scores, setScores] = useState<EvaluationScores>({ ...EMPTY_SCORES })
@@ -227,15 +231,24 @@ export default function EvaluatePage() {
           <p className="text-sm text-gray-400 text-center py-8">필터 조건에 맞는 번역이 없습니다.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="text-sm table-fixed" style={{ width: widths.reduce((a, b) => a + b, 0) }}>
               <thead>
                 <tr className="border-b border-gray-100 text-left">
-                  <th className="pb-2 font-medium text-gray-500 w-1/3">원문</th>
-                  <th className="pb-2 font-medium text-gray-500 w-1/3">번역문</th>
-                  <th className="pb-2 font-medium text-gray-500">언어</th>
-                  <th className="pb-2 font-medium text-gray-500">프롬프트</th>
-                  <th className="pb-2 font-medium text-gray-500">작성자</th>
-                  <th className="pb-2 font-medium text-gray-500">날짜</th>
+                  {['원문', '번역문', '언어', '프롬프트', '작성자', '날짜'].map((label, i) => (
+                    <th
+                      key={i}
+                      style={{ width: widths[i], position: 'relative' }}
+                      className="pb-2 font-medium text-gray-500 pr-3 select-none"
+                    >
+                      {label}
+                      {i < 5 && (
+                        <div
+                          onMouseDown={(e) => { e.preventDefault(); startResize(i, e.clientX) }}
+                          className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-300"
+                        />
+                      )}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -249,19 +262,15 @@ export default function EvaluatePage() {
                         : 'hover:bg-gray-50'
                     }`}
                   >
-                    <td className="py-2 pr-3 text-gray-700">
-                      <p className="truncate max-w-xs">{t.sourceText}</p>
-                    </td>
-                    <td className="py-2 pr-3 text-gray-700">
-                      <p className="truncate max-w-xs">{t.translatedText}</p>
-                    </td>
+                    <td className="py-2 pr-3 text-gray-700 truncate" style={{ maxWidth: widths[0] }}>{t.sourceText}</td>
+                    <td className="py-2 pr-3 text-gray-700 truncate" style={{ maxWidth: widths[1] }}>{t.translatedText}</td>
                     <td className="py-2 pr-3 text-gray-500 whitespace-nowrap text-xs">{t.sourceLang} → {t.targetLang}</td>
-                    <td className="py-2 pr-3 text-gray-500 text-xs">{t.promptVersionName}</td>
+                    <td className="py-2 pr-3 text-gray-500 text-xs truncate">{t.promptVersionName}</td>
                     <td className="py-2 pr-3 text-xs">
                       {t.userId === user?.id ? (
-                        <span className="text-indigo-600 font-medium">{displayName(t.userEmail)}</span>
+                        <span className="text-indigo-600 font-medium">{displayName(t.userEmail, t.userId)}</span>
                       ) : (
-                        <span className="text-gray-500">{displayName(t.userEmail)}</span>
+                        <span className="text-gray-500">{displayName(t.userEmail, t.userId)}</span>
                       )}
                     </td>
                     <td className="py-2 pr-3 text-gray-400 text-xs whitespace-nowrap">
