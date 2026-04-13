@@ -372,9 +372,9 @@ export default function EvaluatePage() {
                         <span className="text-xs text-gray-500">
                           by{' '}
                           {ev.userId === user?.id ? (
-                            <span className="text-indigo-600 font-medium">{displayName(ev.userEmail)}</span>
+                            <span className="text-indigo-600 font-medium">{displayName(ev.userEmail, ev.userId)}</span>
                           ) : (
-                            <span>{displayName(ev.userEmail)}</span>
+                            <span>{displayName(ev.userEmail, ev.userId)}</span>
                           )}
                         </span>
                       </div>
