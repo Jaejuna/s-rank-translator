@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 export interface PromptVersion {
   id: string
   userId: string
+  userEmail: string
   name: string
   content: string
   createdAt: string
@@ -37,6 +38,7 @@ function toPromptVersion(row: Record<string, unknown>): PromptVersion {
   return {
     id: row.id as string,
     userId: row.user_id as string,
+    userEmail: (row.user_email as string) ?? '',
     name: row.name as string,
     content: row.content as string,
     createdAt: row.created_at as string,
@@ -70,6 +72,7 @@ export const usePromptStore = create<PromptState>((set, get) => ({
       .from('prompt_versions')
       .insert({
         user_id: user.user.id,
+        user_email: user.user.email ?? '',
         name: 'Default v1.0',
         content: DEFAULT_PROMPT_CONTENT,
         is_default: true,
@@ -84,7 +87,7 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     if (!user.user) return
     const { data } = await supabase
       .from('prompt_versions')
-      .insert({ user_id: user.user.id, name, content, is_default: false })
+      .insert({ user_id: user.user.id, user_email: user.user.email ?? '', name, content, is_default: false })
       .select()
       .single()
     if (data) set((state) => ({ prompts: [...state.prompts, toPromptVersion(data)] }))

@@ -58,8 +58,8 @@ function avgScore(scores: EvaluationScores): number {
   return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10
 }
 
-function shortId(userId: string) {
-  return userId.slice(0, 8)
+function displayName(email: string) {
+  return email ? email.split('@')[0] : '?'
 }
 
 const LANGUAGES = [
@@ -259,9 +259,9 @@ export default function EvaluatePage() {
                     <td className="py-2 pr-3 text-gray-500 text-xs">{t.promptVersionName}</td>
                     <td className="py-2 pr-3 text-xs">
                       {t.userId === user?.id ? (
-                        <span className="text-indigo-600 font-medium">나</span>
+                        <span className="text-indigo-600 font-medium">{displayName(t.userEmail)}</span>
                       ) : (
-                        <span className="text-gray-400 font-mono">{shortId(t.userId)}</span>
+                        <span className="text-gray-500">{displayName(t.userEmail)}</span>
                       )}
                     </td>
                     <td className="py-2 pr-3 text-gray-400 text-xs whitespace-nowrap">
@@ -363,9 +363,9 @@ export default function EvaluatePage() {
                         <span className="text-xs text-gray-500">
                           by{' '}
                           {ev.userId === user?.id ? (
-                            <span className="text-indigo-600 font-medium">나</span>
+                            <span className="text-indigo-600 font-medium">{displayName(ev.userEmail)}</span>
                           ) : (
-                            <span className="font-mono">{shortId(ev.userId)}</span>
+                            <span>{displayName(ev.userEmail)}</span>
                           )}
                         </span>
                       </div>

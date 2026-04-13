@@ -16,8 +16,8 @@ const LANGUAGES = [
   { code: 'Spanish', label: '스페인어' },
 ]
 
-function shortId(userId: string) {
-  return userId.slice(0, 8)
+function displayName(email: string) {
+  return email ? email.split('@')[0] : '?'
 }
 
 export default function TranslatePage() {
@@ -204,9 +204,9 @@ export default function TranslatePage() {
                     <td className="py-2 pr-3 text-gray-500 text-xs">{t.model}</td>
                     <td className="py-2 pr-3 text-xs">
                       {t.userId === user?.id ? (
-                        <span className="text-indigo-600 font-medium">나</span>
+                        <span className="text-indigo-600 font-medium">{displayName(t.userEmail)}</span>
                       ) : (
-                        <span className="text-gray-400 font-mono">{shortId(t.userId)}</span>
+                        <span className="text-gray-500">{displayName(t.userEmail)}</span>
                       )}
                     </td>
                     <td className="py-2 pr-3 text-gray-400 text-xs whitespace-nowrap">

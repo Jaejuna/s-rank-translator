@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { usePromptStore, type PromptVersion } from '../store/promptStore'
 import { useAuthStore } from '../store/authStore'
 
-function shortId(userId: string) {
-  return userId.slice(0, 8)
+function displayName(email: string) {
+  return email ? email.split('@')[0] : '?'
 }
 
 export default function PromptsPage() {
@@ -112,9 +112,9 @@ export default function PromptsPage() {
                     <span className="text-xs text-gray-400">
                       by{' '}
                       {p.userId === user?.id ? (
-                        <span className="text-indigo-600 font-medium">나</span>
+                        <span className="text-indigo-600 font-medium">{displayName(p.userEmail)}</span>
                       ) : (
-                        <span className="font-mono">{shortId(p.userId)}</span>
+                        <span>{displayName(p.userEmail)}</span>
                       )}
                     </span>
                   </div>
